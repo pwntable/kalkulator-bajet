@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+  <meta charset="UTF-8">
+  <title>Kalkulator Bajet Bulanan</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- jsPDF + html2canvas for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Montserrat:600,400&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background: #f7fbff;
+      font-family: 'Montserrat', Arial, sans-serif;
+      color: #222;
+      margin: 0;
+    }
+    .container {
+      max-width: 400px;
+      margin: 56px auto;
+      background: #fff;
+      border-radius: 22px;
+      padding: 38px 18px 24px;
+      box-shadow: 0 8px 28px rgba(55,90,170,0.09);
+    }
+    h2 {
+      text-align: center;
+      margin-top: 0;
+      margin-bottom: 28px;
+      font-weight: 700;
+      font-size: 1.5em;
+      letter-spacing: .01em;
+    }
+    h2 span { color: #23c671; }
+
+    /* --- FORM --- */
+    .main-form-section, .output-section { display: none; }
+    .main-form-section.active, .output-section.active { display: block; }
+    form label {
+      display: block;
+      margin: 13px 0 4px 2px;
+      font-weight: 600;
+      font-size: .99em;
+      letter-spacing: -.01em;
+    }
+    form input[type=number] {
+      width: 100%;
+      padding: 10px 13px;
+      border: 1.2px solid #d2e3ef;
+      border-radius: 7px;
+      font-size: 1rem;
+      margin-bottom: 4px;
+      background: #f7fbff;
+      transition: border-color .19s, background .17s;
+      box-sizing: border-box;
+      outline: none;
+      font-family: inherit;
+      color: #27325a;
+      font-weight: 500;
+    }
+    form input[type=number]:focus {
+      border-color: #23c671;
+      background: #fff;
+    }
+    /* Remove spinner chrome */
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+      -webkit-appearance: none; margin: 0;
+    }
+    input[type=number] { -moz-appearance: textfield; }
+
+    .btn-row {
+      display: flex;
+      gap: 18px;
+      margin-top: 21px;
+    }
+    button, .mybtn {
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 1.07rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 7px;
+      padding: 12px 0;
+      transition: .15s;
+    }
+    .submit-btn {
+      background: #3596f3;
+      color: #fff;
+      flex: 1;
+    }
+    .submit-btn:hover { background: #1876cc;}
+    .reset-btn {
+      background: #fa685c;
+      color: #fff;
+      flex: 1;
+    }
+    .reset-btn:hover { background: #ee4433; }
+    .info-bawah {
+      font-size: .97rem;
+      color: #7b868c;
+      text-align: center;
+      margin-top: 17px;
+      margin-bottom: 2px;
+      letter-spacing: .01em;
+    }
+    .err {
+      color: #f44336;
+      background: none;
+      text-align: center;
+      margin: 10px 0 2px 0;
+      font-weight: 600;
+      font-size: 1em;
+      min-height: 20px;
+    }
+
+    /* --- OUTPUT --- */
+    .output-card {
+      background: #f8fbff;
+      border-radius: 16px;
+      padding: 18px 8px 15px;
+      text-align: center;
+      box-shadow: 0 3px 18px rgba(80,110,150,0.09);
+      margin-bottom: 24px;
+    }
+    .pie-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0 0 7px 0;
+      padding-top: 5px;
+    }
+    #pieChart {
+      display: block;
+      margin: 0 auto;
+      width: 220px !important;
+      height: 220px !important;
+      max-width: 220px;
+      max-height: 220px;
+    }
+    .custom-legend {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin: 12px 0 8px 0;
+      font-size: 1.05rem;
+    }
+    .legend-s {
+      width: 15px;
+      height: 15px;
+      display: inline-block;
+      vertical-align: middle;
+      border-radius: 3px;
+      margin-right: 4px;
+      margin-bottom: 1px;
+    }
+    .legend-simpan   { background: #23c671; }
+    .legend-keperluan{ background: #3596f3; }
+    .legend-kehendak { background: #fbbc04; }
+    .value-list {
+      margin: 19px 0 0;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+    .value-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 1.08rem;
+      padding: 11px 12px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-weight: 600;
+    }
+    .v-simpanan   { background: #ebfff5; color: #059645;}
+    .v-keperluan  { background: #f1f6ff; color: #2475b8;}
+    .v-kehendak   { background: #fff8e6; color: #e9a101;}
+    .label-wrap small {
+      font-size: .915em;
+      font-weight: 400;
+      color: #888;
+      letter-spacing: .03em;
+    }
+    .mybtn {
+      width: 100%;
+      background: #23c671;
+      color: #fff;
+      margin: 22px auto 10px auto;
+      font-size: 1.1rem;
+      box-shadow: 0 2px 10px rgba(33,200,120,0.10);
+      border-radius: 7px;
+      padding: 13px 0;
+    }
+    .mybtn:hover  { background:#19a45f;}
+    .btn-white    { background: #fff !important; color: #377bba !important; border: 2px solid #cbe1f6; }
+    .btn-white:hover { background: #f7fbff !important; color: #14a080 !important; }
+    @media (max-width: 470px) {
+      .container { margin: 5vw 1vw;}
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="main-form-section active" id="formSection">
+    <h2>Kalkulator Bajet <span>Bulanan</span></h2>
+    <form id="budgetForm" autocomplete="off">
+      <div class="err" id="errorMsg"></div>
+      <label for="gaji">Gaji Bersih (RM)</label>
+      <input type="number" id="gaji" required min="0" inputmode="decimal" step="0.01" placeholder="cth: 3500">
+      <label for="simpanan">Simpanan (%)</label>
+      <input type="number" id="simpanan" required min="0" max="100" value="20" autocomplete="off">
+      <label for="keperluan">Keperluan (%)</label>
+      <input type="number" id="keperluan" required min="0" max="100" value="50" autocomplete="off">
+      <label for="kehendak">Kehendak (%)</label>
+      <input type="number" id="kehendak" required min="0" max="100" value="30" autocomplete="off">
+      <div class="btn-row">
+        <button type="submit" class="submit-btn">Submit</button>
+        <button type="button" class="reset-btn" id="resetBtn">Padam</button>
+      </div>
+      <div class="info-bawah">
+        * <b>Simpanan + Keperluan + Kehendak</b> mestilah <span style="color:#23c671;font-weight:700;">100%</span>.
+      </div>
+    </form>
+  </div>
+  <div class="output-section" id="outputSection">
+    <h2>Output Bajet Anda</h2>
+    <div class="output-card" id="outputCard">
+      <div class="pie-wrap">
+        <canvas id="pieChart"></canvas>
+        <div class="custom-legend">
+          <span><span class="legend-s legend-simpan"></span> Simpanan</span>
+          <span><span class="legend-s legend-keperluan"></span> Keperluan</span>
+          <span><span class="legend-s legend-kehendak"></span> Kehendak</span>
+        </div>
+      </div>
+      <div class="value-list" id="valueList"></div>
+    </div>
+    <button class="mybtn" id="downloadPdfBtn">Muat Turun Output (.pdf)</button>
+    <button class="mybtn btn-white" id="backBtn">Kembali ke Utama</button>
+  </div>
+</div>
+<script>
+const formSection = document.getElementById('formSection');
+const outputSection = document.getElementById('outputSection');
+const form = document.getElementById('budgetForm');
+const resetBtn = document.getElementById('resetBtn');
+const errorMsg = document.getElementById('errorMsg');
+const valueList = document.getElementById('valueList');
+const outputCard = document.getElementById('outputCard');
+const downloadPdfBtn = document.getElementById('downloadPdfBtn');
+const backBtn = document.getElementById('backBtn');
+let chart, memoryInput = {gaji:'',simpanan:'',keperluan:'',kehendak:''};
+
+// Form handling with validation
+form.addEventListener('submit',function(e){
+  e.preventDefault();
+  let gaji = parseFloat(form.gaji.value)||0,
+      s = parseFloat(form.simpanan.value)||0,
+      k = parseFloat(form.keperluan.value)||0,
+      d = parseFloat(form.kehendak.value)||0;
+  let total = s+k+d;
+  if(gaji<=0) { errorMsg.textContent="Sila isi Gaji Bersih (RM)!"; return; }
+  if(total !== 100) {
+    errorMsg.innerHTML = "Jumlah peratus Simpanan + Keperluan + Kehendak mestilah <b>tepat 100%</b>. Sekarang anda isi <b>"+total+"%</b>.";
+    return;
+  }
+  errorMsg.textContent="";
+  memoryInput = {gaji:form.gaji.value,simpanan:form.simpanan.value,keperluan:form.keperluan.value,kehendak:form.kehendak.value};
+  renderOutput(gaji,s,k,d);
+  formSection.classList.remove('active');
+  outputSection.classList.add('active');
+});
+
+// Reset form
+resetBtn.onclick = function(){
+  form.reset();
+  setTimeout(()=>{form.gaji.value='';form.simpanan.value='';form.keperluan.value='';form.kehendak.value='';},2);
+  errorMsg.textContent="";
+  memoryInput = {gaji:'',simpanan:'',keperluan:'',kehendak:''};
+};
+
+// Back to form
+backBtn.onclick = function(){
+  formSection.classList.add('active');
+  outputSection.classList.remove('active');
+  // restore data
+  if(memoryInput.gaji){form.gaji.value=memoryInput.gaji;}
+  if(memoryInput.simpanan){form.simpanan.value=memoryInput.simpanan;}
+  if(memoryInput.keperluan){form.keperluan.value=memoryInput.keperluan;}
+  if(memoryInput.kehendak){form.kehendak.value=memoryInput.kehendak;}
+  form.gaji.focus();
+};
+
+// Papar output & pie chart
+function renderOutput(gaji,s,k,d){
+  function f(v){return 'RM'+Number(v).toLocaleString('ms-MY',{minimumFractionDigits:2,maximumFractionDigits:2});}
+  let ns = gaji*s/100, nk = gaji*k/100, nd = gaji*d/100;
+  valueList.innerHTML =
+    `<div class="value-item v-simpanan"><span class="label-wrap">🥇 Simpanan <small>(${s}%)</small></span><span>${f(ns)}</span></div>
+     <div class="value-item v-keperluan"><span class="label-wrap">📦 Keperluan <small>(${k}%)</small></span><span>${f(nk)}</span></div>
+     <div class="value-item v-kehendak"><span class="label-wrap">🎁 Kehendak <small>(${d}%)</small></span><span>${f(nd)}</span></div>`;
+  let ctx = document.getElementById('pieChart').getContext('2d');
+  if(chart) chart.destroy();
+  chart = new Chart(ctx, {
+    type:'pie',
+    data:{labels:['Simpanan','Keperluan','Kehendak'],
+      datasets:[{data:[ns,nk,nd],backgroundColor:['#23c671','#3596f3','#fbbc04']}]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      animation:{animateScale:true}
+    }
+  });
+}
+// Download as PDF, open preview in new tab
+downloadPdfBtn.onclick = function(){
+  setTimeout(async ()=>{
+    await html2canvas(outputCard, {scale:2,useCORS:true,backgroundColor:"#fff"}).then(canvas=>{
+      const imgData=canvas.toDataURL('image/png');
+      const pdf = new window.jspdf.jsPDF('p','pt','a4');
+      const pdfSize = pdf.internal.pageSize;
+      let imgWidth = Math.min(canvas.width/2, 390), ratio = imgWidth/(canvas.width/2),
+          imgHeight = (canvas.height/2)*ratio, x = (pdfSize.width-imgWidth)/2, y = 48;
+      pdf.setFontSize(18);
+      pdf.setFont('helvetica','bold');
+      pdf.text("Output Bajet Anda",pdfSize.width/2,36,null,null,'center');
+      pdf.addImage(imgData,'PNG',x,y,imgWidth,imgHeight);
+      pdf.setFontSize(9);
+      pdf.setTextColor(145); pdf.text("www.kalkulatorbajet.com", pdfSize.width-30, pdfSize.height-16, null,null,'right');
+      // -- Preview in new tab --
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    });
+  },200);
+}
+</script>
+</body>
+</html>
